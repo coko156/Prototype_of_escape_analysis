@@ -7,6 +7,10 @@
 #ifndef GO_ESCAPE_H
 #define GO_ESCAPE_H
 
+#include <vector>
+#include <set>
+#include <map>
+
 class Gogo;
 class Named_object;
 class Statement;
@@ -14,6 +18,8 @@ class Expression_list;
 class Expression;
 class Call_expression;
 class Field_reference_expression;
+class Escape_analysis_info;
+class Escape_analysis_object;
 
 // Escape analysis information about Go program
 
@@ -34,25 +40,25 @@ class Escape_analysis
 {
   public:
     // used to mark the state of a function
-    enum Function_state
-    {
-      ESCAPE_UNKNOWN,
-      ESCAPE_PLANNED,
-      ESCAPE_STARTED,
-      ESCAPE_TAGGED
-    };
+    // enum Function_state
+    // {
+    //   ESCAPE_UNKNOWN,
+    //   ESCAPE_PLANNED,
+    //   ESCAPE_STARTED,
+    //   ESCAPE_TAGGED
+    // };
 
-    enum Object_type
-    {
-      OBJECT,   // Allocation
+    // enum Object_type
+    // {
+    //   OBJECT,   // Allocation
 
-      PARAMETER,	// Formal parameters.
-      // REFVAR,		// Local variables (includes temps).
-      // GLOBAL,		// Global variables.
-      // RETURN,		// Return node.
+    //   PARAMETER,	// Formal parameters.
+    //   // REFVAR,		// Local variables (includes temps).
+    //   // GLOBAL,		// Global variables.
+    //   // RETURN,		// Return node.
 
-      PHANTOM,		// An unknown node pointed by some object field,
-    };
+    //   PHANTOM,		// An unknown node pointed by some object field,
+    // };
 
     enum Escape_level
     {
@@ -60,12 +66,12 @@ class Escape_analysis
       ESCAPE_NONE,
       ESCAPE_SCOPE,   // escape from the current scope
       ESCAPE_HEAP,    // escape to the heap.
-      ESCAPE_RETURN,
-    }
+      ESCAPE_RETURN
+    };
 
     // Constructor
     Escape_analysis()
-      : escape_infp_map_()
+      : escape_info_map_()
     { }
 
     // Destructor
@@ -90,15 +96,9 @@ class Escape_analysis
 
     // Initialize the escape analysis information for a function.
     // TODO traverse to bind the info to the minimal set of function.
-    Escape_analysis_info*
-    initialize_escape_info(Named_object*);
+    // Escape_analysis_info*
+    // initialize_escape_info(Named_object*);
 
-    // Add a function to the set of function to explore.
-    void
-    add_function(Named_object* no)
-    {
-      this->functions_.insert(no);
-    }
 
     // Return whether a function is deemed safe. i.e. not globally leaking
     // objects reachable by parameters.
@@ -109,11 +109,11 @@ class Escape_analysis
 
     // Add a call
     // FIXME
-    void
-    add_caller_callee(Named_object* caller, const Named_object* callee)
-    {
-      this->caller_map[callee].insert(caller);
-    }
+    // void
+    // add_caller_callee(Named_object* caller, const Named_object* callee)
+    // {
+    //   this->caller_map[callee].insert(caller);
+    // }
 
   private:
     // Typedef for the escape info map
@@ -154,9 +154,7 @@ class Escape_analysis_info
   public:
     // Constructor
     Escape_analysis_info(Escape_analysis* escape_analysis)
-      : escape_analysis_(escape_analysis),
-      updated_(false),
-      aborted_(false) { }
+      : escape_analysis_(escape_analysis) { }
 
     // Destructor
     ~Escape_analysis_info();
@@ -248,24 +246,24 @@ class Escape_analysis_info
 
 };
 
-class Escape_analysis_object
-{
-  public:
-
-    // Constructor
-    // Object_type to mark the recent node type. We abstruct a phantom node to
-    // represent the outer.
-    Escape_analysis_object(Escape_analysis::Object_type object_type,
-        unsigned int id,
-        Escape_analysis_info* escape_info,
-        const Named_object* no,
-        Expression* expr,
-        Escape_analysis::Escape_level escape_level);
-
-  private:
-    // We store Escape_analysis_object entries in set, so a comparator is
-    // needed.
-};
+// class Escape_analysis_object
+// {
+//   public:
+// 
+//     // Constructor
+//     // Object_type to mark the recent node type. We abstruct a phantom node to
+//     // represent the outer.
+//     Escape_analysis_object(Escape_analysis::Object_type object_type,
+//         unsigned int id,
+//         Escape_analysis_info* escape_info,
+//         const Named_object* no,
+//         Expression* expr,
+//         Escape_analysis::Escape_level escape_level);
+// 
+//   private:
+//     // We store Escape_analysis_object entries in set, so a comparator is
+//     // needed.
+// };
 
 
 #endif

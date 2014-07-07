@@ -22,6 +22,19 @@ Gogo::optimize_allocation()
   Escape_analysis::perform(this);
 }
 
+void
+Escape_analysis::perform(Gogo* gogo)
+{
+    Escape_analysis escape_analysis;
+    escape_analysis.compute_functions_to_process(gogo);
+}
+
+void
+Escape_analysis::compute_functions_to_process(Gogo* gogo)
+{
+    Call_graph_traverse_functions cgtf(this);
+    gogo->traverse(&cgtf);
+}
 
 class Call_graph_traverse_functions : public Traverse
 {
@@ -29,7 +42,7 @@ class Call_graph_traverse_functions : public Traverse
     Call_graph_traverse_functions(
         Escape_analysis* escape_analysis_ctx)
       : Traverse(traverse_functions),
-      eacape_analysis_ctx_(escape_analysis_ctx)
+      escape_analysis_ctx_(escape_analysis_ctx)
   { }
    
   protected:
@@ -40,13 +53,14 @@ class Call_graph_traverse_functions : public Traverse
     Escape_analysis* escape_analysis_ctx_;
 };
 
+int
 Call_graph_traverse_functions::function(Named_object* no)
 {
-  this->escape_analysis_ctx->add_function(no);
+  this->escape_analysis_ctx_->add_function(no);
   printf("%s\n", no->name().c_str());
 
   go_assert(no->is_function());
-  Function* func = no->func_value();
+  // Function* func = no->func_value();
 
   // TODO
   // Call_graph_traverse_expression
