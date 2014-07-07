@@ -46,13 +46,12 @@ class Escape_analysis
     {
       OBJECT,   // Allocation
 
-      // PARAMETER,	// Formal parameters.
+      PARAMETER,	// Formal parameters.
       // REFVAR,		// Local variables (includes temps).
       // GLOBAL,		// Global variables.
       // RETURN,		// Return node.
 
       PHANTOM,		// An unknown node pointed by some object field,
-      FIELD		// A node representing the field of an object.
     };
 
     enum Escape_level
@@ -79,6 +78,11 @@ class Escape_analysis
     // Compute function list
     void
     compute_functions_to_process(Gogo*);
+
+    // Add functions to the set of functions to explore.
+    void
+    add_function(Named_object* no)
+    { this->functions_.insert(no); }
 
     // Compute the analysis results for the current package
     void 
@@ -143,7 +147,7 @@ class Escape_analysis
     // FIXME use like pdepth
     // keep track of the scope depth to annotate created objects.
     uint current_scope_depth_;
-}
+};
 
 class Escape_analysis_info
 {
@@ -249,15 +253,19 @@ class Escape_analysis_object
   public:
 
     // Constructor
+    // Object_type to mark the recent node type. We abstruct a phantom node to
+    // represent the outer.
     Escape_analysis_object(Escape_analysis::Object_type object_type,
         unsigned int id,
         Escape_analysis_info* escape_info,
         const Named_object* no,
         Expression* expr,
         Escape_analysis::Escape_level escape_level);
-    // TODO Jul 1
 
-}
+  private:
+    // We store Escape_analysis_object entries in set, so a comparator is
+    // needed.
+};
 
 
 #endif
