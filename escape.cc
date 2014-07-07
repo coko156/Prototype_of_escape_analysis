@@ -69,3 +69,4 @@ Escape_analysis::compute_functions_to_process(Gogo* gogo)
 }
 
 
+Escape_analysis::~Escape_analysis() { }
