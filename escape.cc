@@ -1,13 +1,13 @@
 #include <stdio.h>
 
 #include "gogo.h"
-#include "escape.h"
 #include "types.h"
 #include "expressions.h"
 #include "statements.h"
 #include "go-optimize.h"
 #include "ast-dump.h"
 #include "go-dump.h"
+#include "escape.h"
 
 class Escape_analysis;
 class Escape_analysis_info;
@@ -22,20 +22,7 @@ Gogo::optimize_allocation()
   Escape_analysis::perform(this);
 }
 
-void
-Escape_analysis::perform(Gogo* gogo)
-{
-    Escape_analysis escape_analysis;
-    escape_analysis.compute_functions_to_process(gogo);
-}
-
-void
-Escape_analysis::compute_functions_to_process(Gogo* gogo)
-{
-    Call_graph_traverse_functions cgtf(this);
-    gogo->traverse(&cgtf);
-}
-
+// TODO;;;;;;
 class Call_graph_traverse_functions : public Traverse
 {
   public:
@@ -67,3 +54,18 @@ Call_graph_traverse_functions::function(Named_object* no)
 
   return TRAVERSE_CONTINUE;
 }
+void
+Escape_analysis::perform(Gogo* gogo)
+{
+    Escape_analysis escape_analysis;
+    escape_analysis.compute_functions_to_process(gogo);
+}
+
+void
+Escape_analysis::compute_functions_to_process(Gogo* gogo)
+{
+    Call_graph_traverse_functions cgtf(this);
+    gogo->traverse(&cgtf);
+}
+
+
