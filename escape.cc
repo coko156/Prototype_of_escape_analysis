@@ -18,7 +18,7 @@ void
 Gogo::optimize_allocation()
 {
   // TODO temporarily use this for debug.
-  // Add some flags here later.
+  // Add some flags to determine whether to perform.
   Escape_analysis::perform(this);
 }
 
@@ -32,7 +32,6 @@ class Call_graph_traverse_functions : public Traverse
       escape_analysis_ctx_(escape_analysis_ctx)
   { }
    
-  protected:
     int
     function(Named_object*);
 

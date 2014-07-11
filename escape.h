@@ -1,9 +1,3 @@
-// escape.h -- go frontend escape analysis.    -*- c++ -*-
-
-// copyright 2011 the go authors. all rights reserved.
-// use of this source code is governed by a bsd-style
-// license that can be found in the license file.
-
 #ifndef GO_ESCAPE_H
 #define GO_ESCAPE_H
 
@@ -29,45 +23,26 @@ class Escape_analysis_object;
 // The mutually recursive functions (which have strong connected components) or
 // single non-recursive functions. Bottom up.
 
-// If there isn't any strong connected components, run a topological sort to
-// get functions ordered.
-
 // We care about whether the pointer to an in-function variable can escape to 
 // the outer scope. We make every pointer cannot be proved not escaped stay 
 // on heap.
 
+// Graph build: We construct a graph of which value flows to where
+// Walk the graph: flood fill the graph to get the escape information.
+
 class Escape_analysis
 {
   public:
-    // used to mark the state of a function
-    // enum Function_state
+
+    // Supposed move to Escape_analysis_object
+    // enum Escape_level
     // {
     //   ESCAPE_UNKNOWN,
-    //   ESCAPE_PLANNED,
-    //   ESCAPE_STARTED,
-    //   ESCAPE_TAGGED
+    //   ESCAPE_NONE,
+    //   ESCAPE_SCOPE,   // escape from the current scope
+    //   ESCAPE_HEAP,    // escape to the heap.
+    //   ESCAPE_RETURN
     // };
-
-    // enum Object_type
-    // {
-    //   OBJECT,   // Allocation
-
-    //   PARAMETER,	// Formal parameters.
-    //   // REFVAR,		// Local variables (includes temps).
-    //   // GLOBAL,		// Global variables.
-    //   // RETURN,		// Return node.
-
-    //   PHANTOM,		// An unknown node pointed by some object field,
-    // };
-
-    enum Escape_level
-    {
-      ESCAPE_UNKNOWN,
-      ESCAPE_NONE,
-      ESCAPE_SCOPE,   // escape from the current scope
-      ESCAPE_HEAP,    // escape to the heap.
-      ESCAPE_RETURN
-    };
 
     // Constructor
     Escape_analysis()
@@ -79,41 +54,20 @@ class Escape_analysis
 
     // Perform the escape analysis
     static void
-    perform(Gogo*);
+      perform(Gogo*);
 
     // Compute function list
     void
-    compute_functions_to_process(Gogo*);
+      compute_functions_to_process(Gogo*);
 
     // Add functions to the set of functions to explore.
     void
-    add_function(Named_object* no)
-    { this->functions_.insert(no); }
+      add_function(Named_object* no)
+      { this->functions_.insert(no); }
 
     // Compute the analysis results for the current package
     void 
-    compute_analysis_results();
-
-    // Initialize the escape analysis information for a function.
-    // TODO traverse to bind the info to the minimal set of function.
-    // Escape_analysis_info*
-    // initialize_escape_info(Named_object*);
-
-
-    // Return whether a function is deemed safe. i.e. not globally leaking
-    // objects reachable by parameters.
-    bool is_safe_function(Named_object* no)
-    {
-      return this->safe_functions_.count(no) != 0;
-    }
-
-    // Add a call
-    // FIXME
-    // void
-    // add_caller_callee(Named_object* caller, const Named_object* callee)
-    // {
-    //   this->caller_map[callee].insert(caller);
-    // }
+      compute_analysis_results();
 
   private:
     // Typedef for the escape info map
@@ -125,7 +79,8 @@ class Escape_analysis
 
     typedef std::vector<Named_object*> Named_object_vector;
 
-    // FIXME
+    // TODO I'll make it record escape infomation for 
+    // function set.
     // Escape analysis info for each function.
     Escape_info_map escape_info_map_;
 
@@ -140,50 +95,43 @@ class Escape_analysis
 
     // The original set of functions in this package.
     Named_object_set functions_;
-
-    // Topologicla ordered function.
-    Named_object_vector sorted_functions_;
-
-    // FIXME use like pdepth
-    // keep track of the scope depth to annotate created objects.
-    uint current_scope_depth_;
 };
 
 class Escape_analysis_info
 {
   public:
     // Constructor
-    Escape_analysis_info(Escape_analysis* escape_analysis)
-      : escape_analysis_(escape_analysis) { }
+    Escape_analysis_info(Named_object* no)
+      : current_function_(no) { }
 
     // Destructor
     ~Escape_analysis_info();
 
     // dig into the functions.
     void
-    escape_func(Named_object* no);
+      escape_func(Named_object* no);
 
     // for statements.
     // TODO parameters
     void
-    escape_statement_list();
+      escape_statement_list();
     void
-    escape_statement();
+      escape_statement();
 
     // TODO parameters 
     void
-    escape_expression();
+      escape_expression();
 
     // pulled out from escape_expression
     // TODO parameters
     void
-    escape_expression_call();
+      escape_expression_call();
 
     // store the link dst <- src in dst
     // build up edges for the connection graph
     // TODO parameters
     void
-    escape_flows();
+      escape_flows();
 
     // Start from the dst node, when hit a reference we make level goes up by
     // one, and hit a dereference we make it minus one. So if we find the level
@@ -196,19 +144,16 @@ class Escape_analysis_info
     // escape_flood() walk from dst nodes and touch every node it can reach
     // TODO parameters
     void
-    escape_flood();
+      escape_flood();
 
     // TODO parameters
     void
-    escape_walk(int level);
+      escape_walk(int level);
 
   private:
 
     // Prepare for using
     typedef std::map<const Expression*, Escape_analysis_object*> Expression_map;
-
-    typedef std::map<const Named_object*, Escape_analysis_object*>
-      Named_object_map;
 
     typedef std::map<source_location, Escape_analysis_object*>
       Location_object_map;
@@ -233,37 +178,69 @@ class Escape_analysis_info
     // We create at most 1 phatom object per expression.
     Named_object_map no_object_map_;
 
-    // Contains allocations, 
-    // We create at most one allocation object per source_location.
-    Location_object_map location_object_map_;
-
     // Contains temporary references.
     // 1 reference per temporary statement.
     Temporary_object_map temporary_reference_map_;
 
-    // Link to parent.
-    Escape_analysis* escape_analysis_;
+    // The current function being analysised.
+    Named_object* current_function_;
 
+    // Phatom act as an abstract of outer scope.
+    // Which return values, variables that assigned to global variables
+    // ... all flows to.
+    Escape_analysis_Object* phatom;
+
+    // Store the dst node appear in this set of functions.
+    // Later will search from here.
+    Escape_analysis_Object* dsts;
 };
 
-// class Escape_analysis_object
-// {
-//   public:
-// 
-//     // Constructor
-//     // Object_type to mark the recent node type. We abstruct a phantom node to
-//     // represent the outer.
-//     Escape_analysis_object(Escape_analysis::Object_type object_type,
-//         unsigned int id,
-//         Escape_analysis_info* escape_info,
-//         const Named_object* no,
-//         Expression* expr,
-//         Escape_analysis::Escape_level escape_level);
-// 
-//   private:
-//     // We store Escape_analysis_object entries in set, so a comparator is
-//     // needed.
-// };
+// Representation of an internal/external objects.
+// TODO Modify here.....
+class Escape_analysis_object
+{
+  public:
+
+    // Constructor
+    // Object_type to mark the recent node type. We abstruct a phantom node to
+    // represent the outer.
+    Escape_analysis_object(
+        unsigned int id,    // for debug
+        Escape_analysis_info* escape_info,
+        const Named_object* no,
+        Expression* expr,
+      : escape_status_(ESCAPE_NONE),
+        escape_info_(escape_info),
+        object_(no),
+        expression_(expr) { }
+
+  private:
+
+    enum Escape_status {
+      ESCAPE_UNKNOWN,
+      ESCAPE_NONE,
+      ESCAPE_SCOPE,
+      ESCAPE_HEAP
+    };
+
+    // Recorde the escape status for each node.
+    Escape_status escape_status_;
+
+    Escape_analysis_info escape_info_;
+
+    // For debuging.
+    unsigned int object_id_;
+
+    // Named_object it represent if any.
+    Named_object* object_;
+
+    // Expression it represent if any.
+    Expression* expression_;
+
+    // Store the node it can reach.
+    // We store the dst->src edge in dst.
+    Object_set out_edges_;
+};
 
 
 #endif
